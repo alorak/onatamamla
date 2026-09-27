@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>10'a Tamamla — Onluk Çerçeve Oyunu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#16213E;
+    --ink-soft:#5A6480;
+    --paper:#E9EEF3;
+    --board:#FFFFFF;
+    --red:#E2503F;
+    --red-dark:#A8331F;
+    --yellow:#F2B02C;
+    --yellow-dark:#8A5D05;
+    --green:#2E8B57;
+    --green-bg:#DDF0E4;
+    --red-bg:#FBE3DF;
+    --rule:#C6D0DC;
+    --display:"Bricolage Grotesque","Trebuchet MS",sans-serif;
+    --body:"Atkinson Hyperlegible","Verdana",sans-serif;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+
+  body{
+    font-family:var(--body);
+    color:var(--ink);
+    background-color:var(--paper);
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:24px 16px 48px;
+  }
+
+  .wrap{width:100%;max-width:560px;display:flex;flex-direction:column;align-items:center;gap:20px}
+
+  header{text-align:center}
+  h1{font-family:var(--display);font-size:38px;font-weight:800;line-height:1.05;letter-spacing:-.02em}
+
+  /* --- board --- */
+  .board{
+    background:var(--board);
+    border:3px solid var(--ink);
+    border-radius:18px;
+    box-shadow:6px 6px 0 var(--ink);
+    padding:18px 18px 12px;
+    width:100%;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:10px;
+  }
+
+  .frame{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;width:100%;max-width:400px}
+  .cell{
+    aspect-ratio:1/1;
+    border:2px solid var(--ink);
+    border-radius:8px;
+    background:#F7F9FB;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .chip{
+    width:66%;height:66%;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .chip.dot{
+    border-radius:50%;
+    background:var(--red);
+    box-shadow:inset 0 -3px 0 rgba(0,0,0,.18);
+  }
+  .chip.dot.y{background:var(--yellow)}
+  .chip.emoji{
+    width:82%;height:82%;border-radius:50%;
+    background:var(--red-bg);
+    font-size:100%;line-height:1;
+    container-type:inline-size;
+  }
+  .chip.emoji.y{background:#FDF2DA}
+  .chip.emoji span{font-size:62cqw;line-height:1;display:block;transform:translateY(2%)}
+  .chip.pop{animation:pop .28s cubic-bezier(.34,1.6,.5,1) backwards}
+  @keyframes pop{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+
+  /* --- equation --- */
+  .eq{
+    font-family:var(--display);font-weight:800;font-size:64px;letter-spacing:.02em;
+    display:flex;align-items:center;gap:14px;
+  }
+  .eq .slot{
+    display:inline-flex;align-items:center;justify-content:center;
+    min-width:76px;height:76px;padding:0 8px;
+    border:4px dashed var(--ink-soft);border-radius:16px;
+    color:var(--ink-soft);
+  }
+  .eq .slot.done{border-style:solid;border-color:var(--yellow-dark);background:#FDF2DA;color:var(--yellow-dark)}
+
+  .feedback{
+    font-family:var(--body);font-weight:700;font-size:17px;min-height:22px;line-height:22px;text-align:center;
+    color:var(--ink-soft);
+  }
+  .feedback.ok{color:var(--green)}
+  .feedback.no{color:var(--red-dark)}
+
+  /* --- options --- */
+  .opts{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;width:100%}
+  .opt{
+    font:inherit;cursor:pointer;
+    background:var(--board);
+    border:3px solid var(--ink);
+    border-radius:14px;
+    box-shadow:4px 4px 0 var(--ink);
+    padding:12px 8px 14px;
+    display:flex;flex-direction:column;align-items:center;gap:10px;
+    transition:transform .12s ease,box-shadow .12s ease,background .2s ease,border-color .2s ease;
+  }
+  .opt:hover:not(:disabled){transform:translate(-2px,-2px);box-shadow:6px 6px 0 var(--ink)}
+  .opt:active:not(:disabled){transform:translate(4px,4px);box-shadow:0 0 0 var(--ink)}
+  .opt:focus-visible{outline:3px solid var(--yellow-dark);outline-offset:3px}
+  .opt .num{font-family:var(--display);font-weight:800;font-size:32px;line-height:1}
+  .opt .mini{display:grid;grid-template-columns:repeat(5,1fr);gap:2px;width:100%;max-width:120px}
+  .opt .mini .cell{border-width:1.5px;border-radius:4px}
+  .opt.correct{background:var(--green-bg);border-color:var(--green);box-shadow:4px 4px 0 var(--green)}
+  .opt.wrong{background:var(--red-bg);border-color:var(--red-dark);box-shadow:4px 4px 0 var(--red-dark);animation:shake .3s}
+  .opt:disabled{cursor:default}
+  .opt.dim{opacity:.45}
+  @keyframes shake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+
+  /* --- footer --- */
+  .bar{
+    display:flex;align-items:center;justify-content:space-between;width:100%;
+    font-size:14px;color:var(--ink-soft);
+  }
+  .bar strong{font-family:var(--display);font-size:18px;color:var(--ink)}
+  .reset{
+    font:inherit;font-size:13px;cursor:pointer;color:var(--ink-soft);
+    background:none;border:none;border-bottom:2px solid var(--rule);padding:2px 0;
+  }
+  .reset:hover{color:var(--ink);border-color:var(--ink)}
+  .bar-actions{display:flex;align-items:center;gap:14px}
+  .gear{
+    font:inherit;font-weight:700;font-size:13px;cursor:pointer;color:var(--ink);
+    background:var(--board);border:2px solid var(--ink);border-radius:999px;
+    box-shadow:2px 2px 0 var(--ink);
+    padding:7px 14px;display:flex;align-items:center;gap:7px;
+    transition:transform .12s ease,box-shadow .12s ease;
+  }
+  .gear:hover{transform:translate(-1px,-1px);box-shadow:3px 3px 0 var(--ink)}
+  .gear:active{transform:translate(2px,2px);box-shadow:0 0 0 var(--ink)}
+  .gear svg{width:15px;height:15px}
+
+  /* --- modal --- */
+  .modal{
+    margin:auto;
+    border:3px solid var(--ink);border-radius:20px;
+    box-shadow:8px 8px 0 var(--ink);
+    padding:22px;width:calc(100% - 32px);max-width:400px;
+    background:var(--board);color:var(--ink);font-family:var(--body);
+  }
+  .modal::backdrop{background:rgba(22,33,62,.5)}
+  .modal h2{font-family:var(--display);font-size:26px;font-weight:800}
+  .modal .hint{font-family:var(--display);font-size:14px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);margin:14px 0 8px}
+  .picker{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px}
+  .pick{
+    font:inherit;cursor:pointer;
+    background:#F7F9FB;border:2.5px solid var(--rule);border-radius:14px;
+    padding:12px 6px 9px;display:flex;flex-direction:column;align-items:center;gap:7px;
+    transition:border-color .15s ease,background .15s ease;
+  }
+  .pick:hover{border-color:var(--ink-soft)}
+  .pick[aria-pressed="true"]{border-color:var(--yellow-dark);background:#FDF2DA}
+  .pick .sw{height:34px;font-size:28px;line-height:34px;display:flex;align-items:center;justify-content:center}
+  .pick .sw .dotsw{width:26px;height:26px;border-radius:50%;background:var(--yellow);box-shadow:inset 0 -3px 0 rgba(0,0,0,.18)}
+  .pick .lbl{font-size:12px;font-weight:700;color:var(--ink-soft)}
+  .pick[aria-pressed="true"] .lbl{color:var(--yellow-dark)}
+  .modal .done{
+    font:inherit;font-weight:700;font-size:15px;cursor:pointer;width:100%;
+    background:var(--ink);color:#fff;border:none;border-radius:12px;padding:12px;
+  }
+
+  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+  @media (max-width:420px){
+    h1{font-size:30px}
+    .eq{font-size:46px;gap:10px}
+    .eq .slot{min-width:56px;height:56px}
+    .opt .num{font-size:26px}
+    .board{box-shadow:4px 4px 0 var(--ink)}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation:none !important;transition:none !important}
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>10'a tamamla</h1>
+  </header>
+
+  <main class="board">
+    <div class="frame" id="frame" role="img" aria-label="Onluk çerçeve"></div>
+    <div class="eq" id="eq" aria-hidden="true"></div>
+    <p class="feedback" id="feedback" role="status" aria-live="polite"></p>
+  </main>
+
+  <div class="opts" id="opts"></div>
+
+  <div class="bar">
+    <span>Doğru: <strong id="score">0</strong> / <strong id="total">0</strong></span>
+    <span class="bar-actions">
+      <button class="reset" id="reset" type="button">Baştan başla</button>
+      <button class="gear" id="openSettings" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3.6"/><path d="M18.5 12h2.5M3 12h2.5M12 5.5V3M12 18.5V21M16.6 7.4l1.8-1.8M5.6 18.4l1.8-1.8M16.6 16.6l1.8 1.8M5.6 5.6l1.8 1.8"/></svg>
+        Ayarlar
+      </button>
+    </span>
+  </div>
+</div>
+
+<dialog class="modal" id="settings" aria-labelledby="mtitle">
+  <h2 id="mtitle">Ayarlar</h2>
+  <p class="hint">Pul görünümü</p>
+  <div class="picker" id="picker"></div>
+  <button class="done" id="closeSettings" type="button">Kapat</button>
+</dialog>
+
+<p class="sr" id="live" aria-live="polite"></p>
+
+<script>
+(function(){
+  const frameEl = document.getElementById('frame');
+  const eqEl = document.getElementById('eq');
+  const fbEl = document.getElementById('feedback');
+  const optsEl = document.getElementById('opts');
+  const scoreEl = document.getElementById('score');
+  const totalEl = document.getElementById('total');
+  const liveEl = document.getElementById('live');
+
+  let given = 0, answer = 0, locked = false, score = 0, total = 0, timer = null, choices = [];
+
+  const SKINS = [
+    { id:'dot',  label:'Nokta',    emoji:null },
+    { id:'bug',  label:'Uğur b.',  emoji:'🐞' },
+    { id:'frog', label:'Kurbağa',  emoji:'🐸' },
+    { id:'cat',  label:'Kedi',     emoji:'🐱' },
+    { id:'fish', label:'Balık',    emoji:'🐟' },
+    { id:'bee',  label:'Arı',      emoji:'🐝' }
+  ];
+  let skin = SKINS[0];
+
+  function makeChip(color){
+    const chip = document.createElement('div');
+    if(skin.emoji){
+      chip.className = 'chip emoji' + (color === 'y' ? ' y' : '');
+      const s = document.createElement('span');
+      s.textContent = skin.emoji;
+      chip.appendChild(s);
+    } else {
+      chip.className = 'chip dot' + (color === 'y' ? ' y' : '');
+    }
+    return chip;
+  }
+
+  function cells(container, n, color, fromEnd, animate){
+    container.innerHTML = '';
+    for(let i = 0; i < 10; i++){
+      const c = document.createElement('div');
+      c.className = 'cell';
+      const filled = fromEnd ? (i >= 10 - n) : (i < n);
+      if(filled){
+        const chip = makeChip(color);
+        if(animate){ chip.classList.add('pop'); chip.style.animationDelay = (i * 60) + 'ms'; }
+        c.appendChild(chip);
+      }
+      container.appendChild(c);
+    }
+  }
+
+  function fillAnswer(){
+    const cs = frameEl.children;
+    for(let i = given; i < 10; i++){
+      const chip = makeChip('y');
+      chip.classList.add('pop');
+      chip.style.animationDelay = ((i - given) * 90) + 'ms';
+      cs[i].appendChild(chip);
+    }
+  }
+
+  function drawEq(showAnswer){
+    eqEl.innerHTML = '';
+    const a = document.createElement('span'); a.textContent = given;
+    const plus = document.createElement('span'); plus.textContent = '+';
+    const slot = document.createElement('span');
+    slot.className = 'slot' + (showAnswer ? ' done' : '');
+    slot.textContent = showAnswer ? answer : '?';
+    const eqs = document.createElement('span'); eqs.textContent = '=';
+    const ten = document.createElement('span'); ten.textContent = '10';
+    [a, plus, slot, eqs, ten].forEach(n => eqEl.appendChild(n));
+  }
+
+  function newQuestion(){
+    clearTimeout(timer);
+    locked = false;
+    given = 1 + Math.floor(Math.random() * 9);
+    answer = 10 - given;
+
+    const set = new Set([answer]);
+    while(set.size < 3){
+      const c = 1 + Math.floor(Math.random() * 9);
+      if(c !== answer) set.add(c);
+    }
+    choices = [...set].sort(() => Math.random() - 0.5);
+
+    render(true);
+    liveEl.textContent = given + ' artı kaç eşittir 10?';
+  }
+
+  function render(animate){
+    frameEl.setAttribute('aria-label', 'Onluk çerçevede ' + given + ' pul var');
+    cells(frameEl, given, 'r', false, animate);
+    drawEq(false);
+    fbEl.textContent = '';
+    fbEl.className = 'feedback';
+
+    optsEl.innerHTML = '';
+    choices.forEach(v => {
+      const b = document.createElement('button');
+      b.className = 'opt';
+      b.type = 'button';
+      b.setAttribute('aria-label', v + ' seç');
+
+      const num = document.createElement('span');
+      num.className = 'num'; num.textContent = v;
+
+      const mini = document.createElement('div');
+      mini.className = 'mini';
+      cells(mini, v, 'y', true, false);
+
+      b.append(num, mini);
+      b.addEventListener('click', () => choose(v, b));
+      optsEl.appendChild(b);
+    });
+  }
+
+  function choose(v, btn){
+    if(locked) return;
+    total++; totalEl.textContent = total;
+
+    if(v === answer){
+      locked = true;
+      score++; scoreEl.textContent = score;
+      btn.classList.add('correct');
+      [...optsEl.children].forEach(b => { b.disabled = true; if(b !== btn) b.classList.add('dim'); });
+      fillAnswer();
+      drawEq(true);
+      fbEl.textContent = 'Doğru! ' + given + ' + ' + answer + ' = 10';
+      fbEl.className = 'feedback ok';
+      liveEl.textContent = 'Doğru. ' + given + ' artı ' + answer + ' eşittir 10.';
+      timer = setTimeout(newQuestion, 2000);
+    } else {
+      btn.classList.add('wrong');
+      setTimeout(() => btn.classList.remove('wrong'), 600);
+      fbEl.textContent = 'Olmadı. Boş kutuları say, tekrar dene.';
+      fbEl.className = 'feedback no';
+      liveEl.textContent = 'Yanlış, tekrar dene.';
+    }
+  }
+
+  const dlg = document.getElementById('settings');
+  const picker = document.getElementById('picker');
+
+  SKINS.forEach(s => {
+    const b = document.createElement('button');
+    b.className = 'pick';
+    b.type = 'button';
+    b.setAttribute('aria-pressed', String(s.id === skin.id));
+    b.innerHTML = '<span class="sw">' + (s.emoji ? s.emoji : '<span class="dotsw"></span>') +
+                  '</span><span class="lbl">' + s.label + '</span>';
+    b.addEventListener('click', () => {
+      skin = s;
+      [...picker.children].forEach(c => c.setAttribute('aria-pressed', 'false'));
+      b.setAttribute('aria-pressed', 'true');
+      if(!locked) render(false);
+    });
+    picker.appendChild(b);
+  });
+
+  document.getElementById('openSettings').addEventListener('click', () => dlg.showModal());
+  document.getElementById('closeSettings').addEventListener('click', () => dlg.close());
+  dlg.addEventListener('click', e => { if(e.target === dlg) dlg.close(); });
+
+  document.addEventListener('keydown', e => {
+    if(dlg.open) return;
+    if(['1','2','3'].includes(e.key)){
+      const b = optsEl.children[+e.key - 1];
+      if(b && !b.disabled) b.click();
+    }
+  });
+
+  document.getElementById('reset').addEventListener('click', () => {
+    score = 0; total = 0;
+    scoreEl.textContent = '0'; totalEl.textContent = '0';
+    newQuestion();
+  });
+
+  newQuestion();
+})();
+</script>
+</body>
+</html>
